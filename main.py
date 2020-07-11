@@ -8,7 +8,9 @@ from sys import exit
 
 # The serial ports that the two radios are attached to
 PORT_A = '/dev/ttyUSB0'
+PORT_A_BAUD = 9600
 PORT_B = '/dev/ttyUSB1'
+PORT_B_BAUD = 9600
 
 # Set to True if you would like each radio's destination address to be the other's serial number
 SET_DESTINATIONS = True
@@ -70,7 +72,20 @@ def setDestinationAddress(serialPort, destinationHigh, destinationLow, name):
     print('Address set on {}'.format(name))
     return True
 
-with serial.Serial(PORT_A, 9600) as serialPortA, serial.Serial(PORT_B, 9600) as serialPortB:
+def writeAndExit(serialPort, name):
+    print('Saving configuration on {}'.format(name))
+    saveResponse = runCommand(b'ATWR\r', serialPort)
+    if saveResponse == RADIO_OK:
+        print('Written to {}'.format(name))
+    else:
+        print('Got {} when trying to save to {}'.format(saveResponse, name))
+    exitResponse = runCommand(b'ATCN\r', serialPort)
+    if exitResponse == RADIO_OK:
+        print('Exited command mode on {}'.format(name))
+    else:
+        print('Got {} when trying to save to {}'.format(exitResponse, name))
+
+with serial.Serial(PORT_A, PORT_A_BAUD) as serialPortA, serial.Serial(PORT_B, PORT_B_BAUD) as serialPortB:
     if not checkReady(serialPortA, 'A') or not checkReady(serialPortB, 'B'):
         exit()
 
@@ -96,5 +111,9 @@ with serial.Serial(PORT_A, 9600) as serialPortA, serial.Serial(PORT_B, 9600) as 
             print('Failed to set value on B')
             exit()
         print('Set value for B')
+
+    print()
+    writeAndExit(serialPortA, 'A')
+    writeAndExit(serialPortB, 'B')
 
     print('\nDone')
