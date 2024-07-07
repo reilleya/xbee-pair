@@ -1,5 +1,6 @@
 import serial
 import time
+import subprocess
 from sys import exit
 
 ###################################################################################################
@@ -9,8 +10,11 @@ from sys import exit
 # The serial ports that the two radios are attached to
 PORT_A = '/dev/ttyUSB0'
 PORT_A_BAUD = 9600
+PORT_A_FIRMWARE = '' # If not empty, this file will be flashed to the radio connected to port A
+
 PORT_B = '/dev/ttyUSB1'
 PORT_B_BAUD = 9600
+PORT_B_FIRMWARE = '' # If not empty, this file will be flashed to the radio connected to port B
 
 # Set to True if you would like each radio's destination address to be the other's serial number
 SET_DESTINATIONS = True
@@ -21,9 +25,16 @@ COMMON_CONFIG = {
     'MM': '1'
 }
 
+# Path to the XCTUcmd executable
+XCTU_CMD_PATH = ''
+
 ###################################################################################################
 
 RADIO_OK = [b'O', b'K']
+
+def flashRadio(serialPortPath, serialPortBaudRate, firmwarePath):
+    print('Running command to flash {} with {}'.format(serialPortPath, firmwarePath))
+    subprocess.run([XCTU_CMD_PATH, 'update_firmware', '-f', firmwarePath, '-p', serialPortPath, '-b', str(serialPortBaudRate), '-v']).check_returncode()
 
 def readResponse(serialPort):
     response = []
@@ -84,6 +95,12 @@ def writeAndExit(serialPort, name):
         print('Exited command mode on {}'.format(name))
     else:
         print('Got {} when trying to save to {}'.format(exitResponse, name))
+
+if PORT_A_FIRMWARE != '':
+    flashRadio(PORT_A, PORT_A_BAUD, PORT_A_FIRMWARE)
+
+if PORT_B_FIRMWARE != '':
+    flashRadio(PORT_B, PORT_B_BAUD, PORT_B_FIRMWARE)
 
 with serial.Serial(PORT_A, PORT_A_BAUD) as serialPortA, serial.Serial(PORT_B, PORT_B_BAUD) as serialPortB:
     if not checkReady(serialPortA, 'A') or not checkReady(serialPortB, 'B'):
